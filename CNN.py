@@ -251,7 +251,7 @@ detect = False
 
 
 # encoder
-def encode(x, decoder):
+def encode(x, decoder, index):
     encoder = [
         Reshape((384, 1248, 3), (3, 384, 1248)),
         ConvolutionalSame((3, 384, 1248), 3, 64),
@@ -292,8 +292,9 @@ def encode(x, decoder):
         for layer in encoder:
             output = layer.forward(output)
         x[i] = output
-        with open(decoder + '_input_encoded/' + str(i) + '.pickle', 'wb') as f:
+        with open(decoder + '_input_encoded/' + str(index) + '.pickle', 'wb') as f:
             output.dump(f)
+        index += 1
 
 # code to run segmenter
 if segment:
@@ -305,7 +306,7 @@ if segment:
     images = []
     for i in image_list:
         images.append(np.asarray(cv2.resize(cv2.imread('data_road/training/image_2/' + i).astype('float64'), (1248, 384))))
-    encode(images, 'segmenter')
+    encode(images, 'segmenter', 0)
     #images_list = os.listdir('segmenter_input_encoded')
     #images = []
     #for i in image_list:
@@ -389,7 +390,7 @@ if detect:
     images = []
     for i in image_list:
         images.append(np.asarray(cv2.resize(cv2.imread('data_object/training/image_2/' + i).astype('float64'), (1248, 384))))
-    encode(images, 'detector')
+    encode(images, 'detector', 0)
     #images_list = os.listdir('detector_input_encoded')
     #images = []
     #for i in image_list:
