@@ -241,7 +241,7 @@ learn_rate = 0.1
 
 
 # Whether or not to train, tune, or test if the code is run
-training = True
+training = False
 tuning = False
 testing = False
 
@@ -254,35 +254,35 @@ detect = False
 def encode(x, decoder, index):
     encoder = [
         Reshape((384, 1248, 3), (3, 384, 1248)),
-        ConvolutionalSame((3, 384, 1248), 3, 64),
+        ConvolutionalSame((3, 384, 1248), 3, 64, directory='encoder_0'),
         ReLU(),
-        ConvolutionalSame((64, 384, 1248), 3, 64),
+        ConvolutionalSame((64, 384, 1248), 3, 64, directory='encoder_1'),
         ReLU(),
         MaxPool((64, 384, 1248), 2),
-        ConvolutionalSame((64, 192, 624), 3, 128),
+        ConvolutionalSame((64, 192, 624), 3, 128, directory='encoder_2'),
         ReLU(),
-        ConvolutionalSame((128, 192, 624), 3, 128),
+        ConvolutionalSame((128, 192, 624), 3, 128, directory='encoder_3'),
         ReLU(),
         MaxPool((128, 192, 624), 2),
-        ConvolutionalSame((128, 96, 312), 3, 256),
+        ConvolutionalSame((128, 96, 312), 3, 256, directory='encoder_4'),
         ReLU(),
-        ConvolutionalSame((256, 96, 312), 3, 256),
+        ConvolutionalSame((256, 96, 312), 3, 256, directory='encoder_5'),
         ReLU(),
-        ConvolutionalSame((256, 96, 312), 3, 256),
+        ConvolutionalSame((256, 96, 312), 3, 256, directory='encoder_6'),
         ReLU(),
         MaxPool((256, 96, 312), 2),
-        ConvolutionalSame((256, 48, 156), 3, 512),
+        ConvolutionalSame((256, 48, 156), 3, 512, directory='encoder_7'),
         ReLU(),
-        ConvolutionalSame((512, 48, 156), 3, 512),
+        ConvolutionalSame((512, 48, 156), 3, 512, directory='encoder_8'),
         ReLU(),
-        ConvolutionalSame((512, 48, 156), 3, 512),
+        ConvolutionalSame((512, 48, 156), 3, 512, directory='encoder_9'),
         ReLU(),
         MaxPool((512, 48, 156), 2),
-        ConvolutionalSame((512, 24, 78), 3, 512),
+        ConvolutionalSame((512, 24, 78), 3, 512, directory='encoder_10'),
         ReLU(),
-        ConvolutionalSame((512, 24, 78), 3, 512),
+        ConvolutionalSame((512, 24, 78), 3, 512, directory='encoder_11'),
         ReLU(),
-        ConvolutionalSame((512, 24, 78), 3, 512),
+        ConvolutionalSame((512, 24, 78), 3, 512, directory='encoder_12'),
         ReLU(),
         MaxPool((512, 24, 78), 2)
     ]
@@ -316,6 +316,7 @@ if segment:
     x_test = images[int(0.85 * len(images)):]
 
     # loading the output data for the segmenter
+    #image_list = os.listdir('data_road/training/image_2')
     images = []
     for i in image_list:
         data_image = np.asarray(cv2.resize(cv2.imread('data_road/training/gt_image_2/' + i.split('_')[0] + '_road_' + i.split('_')[1]).astype('float64'), (1248, 384)))
@@ -401,9 +402,10 @@ if detect:
 
     # loading the output data for the segmenter
     # TODO properly read in output data for detector
+    #image_list = os.listdir('data_object/training/label_2')
     images = []
     for i in image_list:
-        with open('data_object/training/label_2' + i.split('.')[0] + '.txt') as f:
+        with open('data_object/training/label_2/' + i.split('.')[0] + '.txt') as f:
             data_image = np.zeros((384, 1248, 2))
             actual_image = np.zeros((384, 1248, 2))
             images.append(actual_image)
@@ -414,7 +416,10 @@ if detect:
     # detector
     # TODO set up layers for detector
     detector = [
-        #
+        ConvolutionalSame((512, 12, 39), 1, 500),
+        ReLU(),
+        ConvolutionalSame((500, 12, 39), 1, 6),
+        ReLU()
     ]
 
     # training code
