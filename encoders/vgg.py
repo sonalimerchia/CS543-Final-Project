@@ -32,7 +32,7 @@ class VGGEncoder:
         self.layers = []
         pass
 
-    def __get_item__(self, key): 
+    def __getitem__(self, key): 
         if key not in self.layer_names: 
             return None 
 
@@ -47,68 +47,7 @@ class VGGEncoder:
         self._softmax_layer("fc6", [7, 7, 512, 4096])
         self._softmax_layer("fc7", [1, 1, 4096, 4096])
 
-        self._score_fc_layer()
-
-        self._upscore_layers()
-        
-    def _upscore_layers(self): 
-        base = self.__get_item__("score_fr")
-        pools = [POOL + "_4", POOL + "_3"]
-        kernel_stddev = [0.001, 0.0001]
-
-        for idx, pool_name in enumerate(pools): 
-            pool_l = self.__get_item__(pool_name)
-            upscore = self._upscore(base, tf.shape(pool_l))
-            pool_weights = self._score_pool(pool_l, kernel_stddev[1])
-            base = tf.add(upscore, pool_weights)
-
-        new_shape = tf.shape(self.layers[0]).numpy()
-        new_shape[-1] = self.num_classes
-        kernel = get_deconv_filter([16, 16, self.num_classes, base.get_shape()[3]])
-        upscore = tf.nn.conv2d_transpose(base, kernel, new_shape, strides=[1, 8, 8, 1], padding='SAME')
-
-        self.layer_names["upscore32"] = len(self.layers)
-        self.layers.append(upscore)
-
-        return upscore
-
-    def _score_pool(self, pool_layer, stddev): 
-        shape = [1, 1,  pool_layer.get_shape()[3], self.num_classes]
-        weights = tf.random.truncated_normal(shape, stddev=stddev)
-        weights = tf.Variable(weights, shape=shape)
-
-        fewer_channels = tf.nn.conv2d(pool_layer, weights, [1, 1, 1, 1], padding="SAME")
-        return fewer_channels
-
-    def _upscore(self, base, shape): 
-        new_shape = shape.numpy()
-        new_shape[-1] = self.num_classes
-        kernel_size = [4, 4, self.num_classes, base.get_shape()[3]]
-        weights = get_deconv_filter(kernel_size)
-        deconvolved = tf.nn.conv2d_transpose(base, weights, new_shape, strides=[1, 2, 2, 1], padding='SAME')
-        
-        return deconvolved
-
-    def _score_fc_layer(self):
-        current_weights = self.pre_computed_weights["fc8"]
-        shape = [1, 1, 4096, 1000]
-
-        weights = current_weights[0].reshape(shape)
-        bias = current_weights[1]
-
-        n_ave = shape[-1] // self.num_classes
-        norm_weights = np.zeros(shape[:3] + [self.num_classes], dtype=np.float32)
-        norm_biases = np.zeros(self.num_classes, dtype=np.float32)
-        for i in range(self.num_classes): 
-            norm_weights[:, :, :, i] = np.mean(weights[:, :, :, i*n_ave: (i + 1)*n_ave], axis=3)
-            norm_biases[i] = np.mean(bias[i*n_ave:(i+1)*n_ave])
-        kernel = tf.Variable(norm_weights, shape=norm_weights.shape)
-        
-        convolved = tf.nn.conv2d(self.layers[-1], kernel, [1, 1, 1, 1], padding='SAME')
-        result = tf.nn.bias_add(convolved, norm_biases)
-
-        self.layer_names["score_fr"] = len(self.layers)
-        self.layers.append(result)
+        pass
 
     def _softmax_layer(self, name, shape): 
         current_weights = self.pre_computed_weights[name]
