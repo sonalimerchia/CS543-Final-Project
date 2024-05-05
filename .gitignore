@@ -1,0 +1,9 @@
+label_2/
+data_road/
+data_object/
+
+data_road.zip
+data_object_image_2.zip
+vgg16.npy
+
+__pycache__
