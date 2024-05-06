@@ -52,10 +52,10 @@ class VGGEncoder:
     def _softmax_layer(self, name, shape): 
         current_weights = self.pre_computed_weights[name]
 
-        kernel = tf.Variable(current_weights[0].reshape(shape), shape=shape)
+        kernel = tf.Variable(current_weights[0].reshape(shape), shape=shape, name=name + "_weight")
         convolved = tf.nn.conv2d(self.layers[-1], kernel, [1, 1, 1, 1], padding='SAME')
 
-        bias = tf.Variable(current_weights[1])
+        bias = tf.Variable(current_weights[1], name=name + "_bias")
         
         conv2d = tf.nn.bias_add(convolved, bias)
         relu = tf.nn.relu(conv2d)

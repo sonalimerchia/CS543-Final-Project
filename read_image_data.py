@@ -1,4 +1,4 @@
-from skimage.io import imread_collection
+import skimage.io
 import cv2
 import numpy as np
 
@@ -8,20 +8,20 @@ NEGATIVE_PIXEL = [255, 0, 0]
 POSITIVE_PIXEL = [255, 0, 255]
 NEUTRAL_PIXEL = [0, 0, 0]
 
-def read_image_data(dirname): 
+def read_image_data(filenames): 
     images = []
 
-    collection = imread_collection(dirname)
-    for im in collection: 
-        images.append(cv2.resize(im, STANDARD_IMG_SIZE))
+    for fn in filenames: 
+        img = skimage.io.imread(fn)
+        images.append(cv2.resize(img, STANDARD_IMG_SIZE))
 
-    return np.array(images, dtype=np.float32), collection.files
+    return np.array(images, dtype=np.float32), filenames
 
 def read_label_image(dirname): 
     images = []
 
     print(dirname)
-    collection = imread_collection(dirname)
+    collection = skimage.io.imread_collection(dirname)
     for im in collection: 
         resized_img = (np.round((cv2.resize(im, STANDARD_IMG_SIZE)) / 255.0) * 255).astype(np.uint8)
         class_img = np.zeros((resized_img.shape[0], resized_img.shape[1], 2))
