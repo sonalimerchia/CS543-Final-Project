@@ -201,11 +201,11 @@ batch_size = 32
 
 
 # Whether or not to train or test if the code is run
-training = True
+training = False
 testing = False
 
 # Whether or not to run the segmenter
-segment = True
+segment = False
 
 
 # encoder
