@@ -29,10 +29,10 @@ for idx, pred in enumerate(data["outputs"][0][:10]):
 
 
 plt.hist(data["times"])
-plt.title("Runtime of Segmentation Decoder")
+plt.title("Runtime of VGG-FC Segmentation Decoder")
 plt.xlabel("Time (ms)")
 plt.ylabel("Frequency")
-plt.savefig(args.output_folder + "runtime_plot.png")
+plt.savefig(args.output_folder + "fc_runtime_plot.png")
 # X = np.arange(data.shape[0])
 # Y = np.arange(data.shape[1])
 

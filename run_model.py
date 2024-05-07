@@ -56,46 +56,46 @@ decoder = tf.keras.models.load_model(args.model_file, custom_objects={
 
 decoder.summary()
 
-# data = None 
-# with open(args.encoded_data, 'rb') as file: 
-#     data = pickle.load(file) 
+data = None 
+with open(args.encoded_data, 'rb') as file: 
+    data = pickle.load(file) 
 
-# key1, key2, key3 = pick_keys(args.type)
-# inputs = data["inputs"]
+key1, key2, key3 = pick_keys(args.type)
+inputs = data["inputs"]
 
-# num_inputs = len(inputs[key1])
-# batch_size = 10
-# num_batches = math.ceil(num_inputs / batch_size)
+num_inputs = len(inputs[key1])
+batch_size = 10
+num_batches = math.ceil(num_inputs / batch_size)
 
-# print("Batching and generating outputs")
-# times = []
-# outputs = []
-# for b in range(num_batches): 
-#     start = b * batch_size
-#     end = (b + 1) * batch_size
-#     if end > num_inputs: 
-#         end = num_inputs
+print("Batching and generating outputs")
+times = []
+outputs = []
+for b in range(num_batches): 
+    start = b * batch_size
+    end = (b + 1) * batch_size
+    if end > num_inputs: 
+        end = num_inputs
 
-#     # Run encoder
-#     start_t = time.time_ns() // 1000000
-#     res = None
-#     if args.use == SEGMENTATION:
-#         res = decoder.predict([inputs[key1], inputs[key2], inputs[key3]])
-#     else: 
-#         res = decoder.predict([inputs[key1], inputs[key2]])
-#     end_t = time.time_ns() // 1000000
+    # Run encoder
+    start_t = time.time_ns() // 1000000
+    res = None
+    if args.use == SEGMENTATION:
+        res = decoder.predict([inputs[key1], inputs[key2], inputs[key3]])
+    else: 
+        res = decoder.predict([inputs[key1], inputs[key2]])
+    end_t = time.time_ns() // 1000000
 
-#     # Only save times of complete batches
-#     if end == (b + 1) * batch_size:
-#         times.append(end_t - start_t)
+    # Only save times of complete batches
+    if end == (b + 1) * batch_size:
+        times.append(end_t - start_t)
 
-#     outputs.append(res)
+    outputs.append(res)
 
-# summary = {
-#     "orderings": data["orderings"],
-#     "times": times, 
-#     "outputs": outputs, 
-# }
+summary = {
+    "orderings": data["orderings"],
+    "times": times, 
+    "outputs": outputs, 
+}
 
-# with open(args.output_file, 'wb') as file: 
-#     pickle.dump(summary, file)
+with open(args.output_file, 'wb') as file: 
+    pickle.dump(summary, file)
