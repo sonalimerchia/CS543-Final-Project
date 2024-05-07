@@ -10,19 +10,17 @@ VGG_POOL = "VGG-pool5"
 VGG_FC = "VGG-fc7"
 
 def get_keys(model): 
-    if model == VGG_POOL: 
-        return "pool_5", "conv4_3"
-    elif model == VGG_FC: 
-        return "fc7", "conv4_3"
+    if model == VGG_POOL or model == VGG_FC: 
+        return "pool_5", "fc7", "conv4_3"
     else: 
-        return "scale_5", "scale_3"
+        return "scale_5", "scale_5", "scale_3"
 
 def run_encoder_for_detection(encoder, model, output_file, filenames): 
     print("Batching for Detection...")
-    batch_size = 2
+    batch_size = 10
     num_batches = math.ceil(len(filenames) / batch_size)
 
-    key1, key2 = get_keys(model)
+    key1_1, key1_2, key2 = get_keys(model)
 
     times = []
     inputs = None
@@ -46,12 +44,14 @@ def run_encoder_for_detection(encoder, model, output_file, filenames):
         
         if inputs is None: 
             inputs = [
-                encoder[key1], 
+                encoder[key1_1], 
+                encoder[key1_2], 
                 encoder[key2], 
             ]
         else: 
-            inputs[0] = tf.concat([inputs[0], encoder[key1]], 0)
-            inputs[1] = tf.concat([inputs[1], encoder[key2]], 0)
+            inputs[0] = tf.concat([inputs[0], encoder[key1_1]], 0)
+            inputs[1] = tf.concat([inputs[1], encoder[key1_2]], 0)
+            inputs[2] = tf.concat([inputs[2], encoder[key2]], 0)
 
     summary = {
         "times": times, 

@@ -120,13 +120,12 @@ def make_detection_model(in_features, num_classes):
 
     scale_down = tf.constant(0.1)
     scaled = MultiplyScalarLayer(scale_down)(feed1_input)
-    scaled = tf.keras.layers.Reshape([1, NUM_CELLS, in_features])(scaled)
-    bottleneck = tf.keras.layers.Conv2D(500, 1, padding='same', name="bottleneck")(scaled) # also "hidden_layer" in paper notation
-    dropout1 = tf.keras.layers.Dropout(0.5)(bottleneck)
+    scaled = tf.keras.layers.Reshape([1, NUM_CELLS, in_features])(scaled) # (None, 468, in_features)
+    bottleneck = tf.keras.layers.Conv2D(500, 1, padding='same', name="bottleneck")(scaled)  # (None, 468, 500)
+    dropout1 = tf.keras.layers.Dropout(0.5)(bottleneck) # []
 
-    box_preds = tf.keras.layers.Conv2D(4, 1, padding='same', name="box_preds")(dropout1)
-    class_preds = tf.keras.layers.Conv2D(num_classes, 1, padding='same', name="class_preds")(dropout1)
-    confidences = tf.keras.layers.Softmax(name="confidences")(class_preds)
+    box_preds = tf.keras.layers.Conv2D(4, 1, padding='same', name="box_preds")(dropout1)  #  (None, 1, 468, 4)
+    class_preds = tf.keras.layers.Conv2D(num_classes, 1, padding='same', name="class_preds")(dropout1) # (None, 1, 468, 9)
 
     num_feed2_channels = SECOND_FEED_CHANNELS // 2
     half_feed2 = SplitLayer(num_feed2_channels, name="half_feed2")(feed2_input)
@@ -141,20 +140,20 @@ def make_detection_model(in_features, num_classes):
     dropout1 = tf.keras.layers.Reshape([NUM_CELLS, HIDDEN_NODES])(dropout1)
     delta_features = tf.keras.layers.Concatenate(axis=2, name="delta_features")([dropout1, rezoomed_features])
     delta_features = tf.keras.layers.Reshape([1, NUM_CELLS, num_delta_features])(delta_features)
-    delta_features = tf.keras.layers.Conv2D(num_feed2_channels // 2, 1, padding="same", name="conv_delta")(delta_features)
+    delta_features = tf.keras.layers.Conv2D(num_feed2_channels // 2, 1, padding="same", name="conv_delta")(delta_features) # (None, 1, 468, 256)
     delta_features = tf.keras.layers.ReLU()(delta_features)
     delta_features = tf.keras.layers.Dropout(0.5)(delta_features)
 
-    pred_boxes_delta = tf.keras.layers.Conv2D(4, 1, padding="same", name="pred_boxes_delta")(delta_features)
+    pred_boxes_delta = tf.keras.layers.Conv2D(4, 1, padding="same", name="pred_boxes_delta")(delta_features) 
     pred_boxes_delta = MultiplyScalarLayer(tf.constant(5, dtype=tf.float32))(pred_boxes_delta)
-    pred_boxes_delta = tf.keras.layers.Reshape([NUM_CELLS, 1, 4])(pred_boxes_delta)
+    pred_boxes_delta = tf.keras.layers.Reshape([NUM_CELLS, 1, 4])(pred_boxes_delta) # (None, 468, 1, 4)
 
-    confidence_delta = tf.keras.layers.Conv2D(num_classes, 1, padding="same", name="pred_boxes_delta")(delta_features)
+    confidence_delta = tf.keras.layers.Conv2D(num_classes, 1, padding="same", name="pred_boxes_delta")(delta_features) # (None, 1, 468, num_classes)
     confidence_delta = MultiplyScalarLayer(tf.constant(50, dtype=tf.float32))(confidence_delta)
 
-    confidences = tf.keras.layers.Softmax(axis=-1)(confidence_delta)
+    roi_boxes = tf.keras.layers.Add(name="roi_boxes")([box_preds, pred_boxes_delta])
 
     return tf.keras.Model(
         inputs=[feed1_input, feed2_input], 
-        outputs=[box_preds, class_preds, confidences, confidence_delta, pred_boxes_delta]
+        outputs=[box_preds, class_preds, confidence_delta, roi_boxes]
     )

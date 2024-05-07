@@ -16,8 +16,7 @@ DETECTION = "DET"
 parser = argparse.ArgumentParser()
 parser.add_argument("-e", "--encodings_file")
 parser.add_argument("-o", "--output_file")
-parser.add_argument('-m', "--model", choices=[VGG_POOL, VGG_FC, RESNET_50, RESNET_101])
-parser.add_argument('-u', "--use", choices=[SEGMENTATION, DETECTION])
+parser.add_argument('-u', "--use", choices=[SEGMENTATION, DETECTION], required=True)
 parser.add_argument('-l', "--labels_dir")
 parser.add_argument('-d', "--hist_file")
 

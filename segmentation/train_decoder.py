@@ -5,8 +5,7 @@ import pickle
 from segmentation.loss import softmax_cross_entropy
 from segmentation.model import make_segmentation_model
 
-
-EPOCHS = 1000
+EPOCHS = 400
 BATCH_SIZE = 32
 
 def train_segmentation_decoder(data, labels, encoder_names, output_file, hist_file):

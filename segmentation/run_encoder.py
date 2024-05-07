@@ -10,19 +10,17 @@ VGG_POOL = "VGG-pool5"
 VGG_FC = "VGG-fc7"
 
 def get_keys(model): 
-    if model == VGG_POOL: 
-        return "pool_5", "pool_4", "pool_3"
-    elif model == VGG_FC: 
-        return "fc7", "pool_4", "pool_3"
+    if model == VGG_POOL or model == VGG_FC: 
+        return "fc7", "pool_5", "pool_4", "pool_3"
     else: 
-        return "scale_5", "scale_4", "scale_3"
+        return "scale_5", "scale_5", "scale_4", "scale_3"
 
 def run_encoder_for_segmentation(encoder, model, output_file, filenames): 
     print("Batching for Segmentation...")
     batch_size = 10
     num_batches = math.ceil(len(filenames) / batch_size)
 
-    key1, key2, key3 = get_keys(model)
+    key1_1, key1_2, key2, key3 = get_keys(model)
 
     times = []
     inputs = None
@@ -46,14 +44,16 @@ def run_encoder_for_segmentation(encoder, model, output_file, filenames):
         
         if inputs is None: 
             inputs = [
-                encoder[key1], 
+                encoder[key1_1], 
+                encoder[key1_2], 
                 encoder[key2], 
                 encoder[key3]
             ]
         else: 
-            inputs[0] = tf.concat([inputs[0], encoder[key1]], 0)
-            inputs[1] = tf.concat([inputs[1], encoder[key2]], 0)
-            inputs[2] = tf.concat([inputs[2], encoder[key3]], 0)
+            inputs[0] = tf.concat([inputs[0], encoder[key1_1]], 0)
+            inputs[1] = tf.concat([inputs[1], encoder[key1_2]], 0)
+            inputs[2] = tf.concat([inputs[2], encoder[key2]], 0)
+            inputs[3] = tf.concat([inputs[3], encoder[key3]], 0)
 
     summary = {
         "times": times, 

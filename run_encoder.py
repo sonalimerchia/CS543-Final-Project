@@ -27,10 +27,6 @@ parser.add_argument('-u', "--use", choices=[SEGMENTATION, DETECTION])
 print("Reading Args...")
 args = parser.parse_args()
 
-if args.model != VGG_POOL and args.model != VGG_FC: 
-    print("Invalid argument. Should specify model to be either", VGG_POOL, "or", VGG_FC)
-    exit(1)
-
 print("Reading Image Names...")
 filenames = [os.path.join(args.training_images, f) for f in os.listdir(args.training_images) if os.path.isfile(os.path.join(args.training_images, f))]
 

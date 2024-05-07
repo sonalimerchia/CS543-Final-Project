@@ -1,4 +1,68 @@
+import tensorflow as tf
+GRID_HEIGHT = 12
+GRID_WIDTH = 39
 
-# 
-def iou_loss(boxes, y_pred):
+GRID_SIZE = GRID_HEIGHT * GRID_WIDTH
+HEAD_WEIGHTS = [1.0, 0.1]
+
+# box_preds
+def box_loss(labels, pred_boxes): 
+    flags, boxes, _ = labels
+
+    true_boxes = tf.reshape(boxes, (GRID_SIZE, 1, 4))
+
+    boxes_mask = tf.reshape(
+        tf.cast(tf.greater(flags, 0), 'float32'), (GRID_SIZE, 1, 1))
     
+    residual = (true_boxes - pred_boxes) * boxes_mask
+    boxes_loss = tf.reduce_sum(tf.abs(residual)) / GRID_SIZE * HEAD_WEIGHTS[1]
+
+    return boxes_loss
+
+# class_preds
+def confidence_loss(labels, pred_classes):
+    flags, _, mask = labels
+
+    true_classes = tf.greater(flags, 0)
+    true_classes = tf.cast(true_classes, 'int64')
+    true_classes = tf.reshape(true_classes, [GRID_SIZE])
+    
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=pred_classes, labels=true_classes)
+    classes_in_cell = tf.reshape(mask, [GRID_SIZE])
+
+    cross_entropy_sum = tf.reduce_sum(classes_in_cell * cross_entropy)
+    conf_loss = cross_entropy_sum / GRID_SIZE * HEAD_WEIGHTS[0]
+
+    return conf_loss
+    
+def delta_conf_loss(labels, pred_confs_deltas): 
+    flags, boxes, mask = labels
+
+    true_boxes = tf.reshape(boxes, (GRID_SIZE, 1, 4))
+    mask_r = tf.reshape(mask, [GRID_SIZE])
+
+    error = (true_boxes[:, :, 0:2] - true_boxes[:, :, 0:2]) / tf.maximum(true_boxes[:, :, 2:4], 1.)
+
+    square_error = tf.reduce_sum(tf.square(error), 2)
+    inside = tf.reshape(tf.to_int64(tf.logical_and(tf.less(square_error, 0.2**2), tf.greater(flags, 0))), [-1])
+    
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=pred_confs_deltas, labels=inside)
+    delta_confs_loss = tf.reduce_sum(cross_entropy * mask_r) / GRID_SIZE * HEAD_WEIGHTS[0] * HEAD_WEIGHTS[1]
+    
+    return delta_confs_loss
+
+def delta_boxes_loss(labels, roi_boxes): 
+    flags, boxes, _ = labels
+
+    true_boxes = tf.reshape(boxes, (GRID_SIZE, 1, 4))
+
+    boxes_mask = tf.reshape(
+        tf.cast(tf.greater(flags, 0), 'float32'), (GRID_SIZE, 1, 1))
+
+    delta_unshaped = true_boxes - roi_boxes
+    delta_residual = tf.reshape(delta_unshaped * boxes_mask, [GRID_SIZE, 1, 4])
+
+    sqrt_delta = tf.minimum(tf.square(delta_residual), 10. ** 2)
+    delta_box_loss = tf.reduce_sum(sqrt_delta) / GRID_SIZE * HEAD_WEIGHTS[1] * 0.03
+
+    return delta_box_loss

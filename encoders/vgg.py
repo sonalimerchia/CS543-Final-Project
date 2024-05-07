@@ -5,24 +5,6 @@ import math
 VGG_MEAN = [103.939, 116.779, 123.68]
 POOL = "pool"
 
-def get_deconv_filter(shape): 
-    N = shape[0]
-    
-    N_p = math.ceil(N / 2.0)
-    center = (2 * N_p - 1 - N_p % 2) / (2.0 * N_p)
-    bilinear = np.zeros([shape[0], shape[1]])
-    for x in range(N):
-        for y in range(N):
-            value = (1 - abs(x / N_p - center)) * (1 - abs(y / N_p - center))
-            bilinear[x, y] = value
-    weights = np.zeros(shape, dtype=np.float32)
-
-    for i in range(shape[2]):
-        weights[:, :, i, i] = bilinear
-
-    kernel = tf.Variable(weights, shape=weights.shape)
-    return kernel
-
 class VGGEncoder: 
     def __init__(self, weights_file, num_classes=20): 
         self._load_vgg16_weights(weights_file)
