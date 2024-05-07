@@ -4,7 +4,12 @@ import pickle
 import math
 import time
 
+from detection.layers import SelectLayer, ClipLayer, FloorLayer, CeilLayer, \
+    MultiplyScalarLayer, GatherLayer, SplitLayer, ValueLayer, TransposeLayer
+
 from tqdm import tqdm
+from segmentation.loss import softmax_cross_entropy
+from detection.loss import box_loss, confidence_loss, delta_conf_loss, roi_box_loss
 
 SEGMENTATION = "SEG"
 DETECTION = "DET"
@@ -22,9 +27,9 @@ parser.add_argument('-u', "--use", choices=[SEGMENTATION, DETECTION], required=T
 parser.add_argument('-t', "--type", choices=[VGG_POOL, VGG_FC, RESNET_50, RESNET_101], required=True)
 
 def pick_keys(type): 
-    if type == VGG_POOL: 
+    if type == VGG_FC: 
         return 0, 2, 3
-    elif type == VGG_FC: 
+    elif type == VGG_POOL: 
         return 1, 2, 3
     return 0, 1, 2
 
@@ -32,52 +37,65 @@ print("Reading Args...")
 args = parser.parse_args()
 
 print("Reading Encoded Data...")
-data = None 
-with open(args.encoded_data, 'rb') as file: 
-    data = pickle.load(file) 
+decoder = tf.keras.models.load_model(args.model_file, custom_objects={
+    "softmax_cross_entropy": softmax_cross_entropy, 
+    'box_loss': box_loss,
+    'confidence_loss': confidence_loss,
+    'delta_conf_loss': delta_conf_loss,
+    'roi_box_loss': roi_box_loss, 
+    'SelectLayer': SelectLayer, 
+    'ClipLayer': ClipLayer, 
+    'FloorLayer': FloorLayer, 
+    'CeilLayer': CeilLayer,
+    'MultiplyScalarLayer': MultiplyScalarLayer,
+    'GatherLayer': GatherLayer, 
+    'SplitLayer': SplitLayer, 
+    'ValueLayer': ValueLayer, 
+    'TransposeLayer': TransposeLayer
+})
 
+decoder.summary()
 
-decoder = tf.keras.models.load_model(args.model_file)
+# data = None 
+# with open(args.encoded_data, 'rb') as file: 
+#     data = pickle.load(file) 
 
-key1, key2, key3 = pick_keys(args.t)
-inputs = data["inputs"]
+# key1, key2, key3 = pick_keys(args.type)
+# inputs = data["inputs"]
 
-num_inputs = len(inputs[key1])
-batch_size = 10
-num_batches = math.ceil(num_inputs / batch_size)
+# num_inputs = len(inputs[key1])
+# batch_size = 10
+# num_batches = math.ceil(num_inputs / batch_size)
 
-print("Batching and generating outputs")
-times = []
-outputs = None
-for b in tqdm(range(num_batches)): 
-    start = b * batch_size
-    end = (b + 1) * batch_size
-    if end > num_inputs: 
-        end = num_inputs
+# print("Batching and generating outputs")
+# times = []
+# outputs = []
+# for b in range(num_batches): 
+#     start = b * batch_size
+#     end = (b + 1) * batch_size
+#     if end > num_inputs: 
+#         end = num_inputs
 
-    # Run encoder
-    start_t = time.time_ns() // 1000000
-    res = None
-    if args.use == SEGMENTATION:
-        res = decoder.predict([inputs[key1], inputs[key2], inputs[key3]])
-    else: 
-        res = decoder.predict([inputs[key1], inputs[key2]])
-    end_t = time.time_ns() // 1000000
+#     # Run encoder
+#     start_t = time.time_ns() // 1000000
+#     res = None
+#     if args.use == SEGMENTATION:
+#         res = decoder.predict([inputs[key1], inputs[key2], inputs[key3]])
+#     else: 
+#         res = decoder.predict([inputs[key1], inputs[key2]])
+#     end_t = time.time_ns() // 1000000
 
-    # Only save times of complete batches
-    if end == (b + 1) * batch_size:
-        times.append(end_t - start_t)
+#     # Only save times of complete batches
+#     if end == (b + 1) * batch_size:
+#         times.append(end_t - start_t)
 
-    if outputs == None: 
-        outputs = res 
-    else:
-        outputs = tf.concat([outputs, res], 0)
+#     outputs.append(res)
 
-summary = {
-    "orderings": data["orderings"],
-    "times": times, 
-    "outputs": outputs, 
-}
+# summary = {
+#     "orderings": data["orderings"],
+#     "times": times, 
+#     "outputs": outputs, 
+# }
 
-with open(args.output_file, 'wb') as file: 
-    pickle.dump(summary, file)
+# with open(args.output_file, 'wb') as file: 
+#     pickle.dump(summary, file)

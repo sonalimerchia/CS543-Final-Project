@@ -40,11 +40,9 @@ def confidence_loss(all_data, pred_classes):
     return conf_loss
     
 def delta_conf_loss(all_data, pred_confs_deltas): 
-    print("all_data", all_data.shape, pred_confs_deltas.shape)
     boxes = all_data[:, :, :, :4]
     confs = all_data[:, :, :, 4:5]
     mask = all_data[:, :, :, -1]
-    print("confs", confs.shape)
 
     true_boxes = tf.reshape(boxes, (GRID_SIZE, 1, 4))
     mask_r = tf.reshape(mask, [GRID_SIZE])

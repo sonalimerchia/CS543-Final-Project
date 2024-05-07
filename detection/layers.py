@@ -9,6 +9,9 @@ class SelectLayer(tf.keras.layers.Layer):
     def call(self, inputs): 
         return inputs[..., self.index]
 
+    def get_config(self):
+        return {"index": self.index}
+
 class ClipLayer(tf.keras.layers.Layer):
     def __init__(self, min_val, max_val, **kwargs):
         super(ClipLayer, self).__init__(**kwargs)
@@ -18,6 +21,9 @@ class ClipLayer(tf.keras.layers.Layer):
 
     def call(self, inputs):
         return tf.clip_by_value(inputs, self.min_value, self.max_value)
+    
+    def get_config(self):
+        return {"min_value": self.min_value, "max_value": self.max_value}
     
 class FloorLayer(tf.keras.layers.Layer): 
     def __init__(self, cast_dtype=tf.float32, **kwargs):
@@ -29,6 +35,9 @@ class FloorLayer(tf.keras.layers.Layer):
         floor = tf.math.floor(inputs)
         return tf.cast(floor, self.cast_dtype)
     
+    def get_config(self):
+        return {"cast_dtype": self.cast_dtype}
+  
 class CeilLayer(tf.keras.layers.Layer): 
     def __init__(self, cast_dtype=tf.float32, **kwargs):
         super(CeilLayer, self).__init__(**kwargs)
@@ -42,6 +51,9 @@ class CeilLayer(tf.keras.layers.Layer):
             return tf.cast(ceil, self.cast_dtype)
         return ceil
     
+    def get_config(self):
+        return {"cast_dtype": self.cast_dtype}
+    
 class GatherLayer(tf.keras.layers.Layer): 
     def __init__(self, **kwargs): 
         super(GatherLayer, self).__init__(**kwargs)
@@ -49,6 +61,9 @@ class GatherLayer(tf.keras.layers.Layer):
 
     def call(self, inputs): 
         return tf.gather(inputs[0], inputs[1], batch_dims=1)
+    
+    def get_config(self):
+        return {}
     
 class MultiplyScalarLayer(tf.keras.layers.Layer): 
     def __init__(self, scalar, **kwargs): 
@@ -59,6 +74,9 @@ class MultiplyScalarLayer(tf.keras.layers.Layer):
     def call(self, inputs): 
         return tf.multiply(self.scalar, inputs)
     
+    def get_config(self):
+        return {"scalar": self.scalar}
+    
 class SplitLayer(tf.keras.layers.Layer): 
     def __init__(self, end, **kwargs): 
         super(SplitLayer, self).__init__(**kwargs)
@@ -67,6 +85,9 @@ class SplitLayer(tf.keras.layers.Layer):
 
     def call(self, inputs): 
         return inputs[..., :self.end]
+    
+    def get_config(self):
+        return {"end": self.end}
     
 class ValueLayer(tf.keras.layers.Layer): 
     def __init__(self, **kwargs): 
@@ -84,6 +105,9 @@ class ValueLayer(tf.keras.layers.Layer):
         prod2 = tf.multiply(alpha, right)
         return tf.add(prod1, prod2)
     
+    def get_config(self):
+        return {}
+    
 class TransposeLayer(tf.keras.layers.Layer): 
     def __init__(self, order, **kwargs): 
         super(TransposeLayer, self).__init__(**kwargs)
@@ -91,3 +115,6 @@ class TransposeLayer(tf.keras.layers.Layer):
 
     def call(self, inputs): 
         return tf.transpose(inputs, self.order)
+    
+    def get_config(self):
+        return {"order": self.order}

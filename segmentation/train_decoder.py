@@ -5,10 +5,13 @@ import pickle
 from segmentation.loss import softmax_cross_entropy
 from segmentation.model import make_segmentation_model
 
-EPOCHS = 400
+EPOCHS = 100
 BATCH_SIZE = 32
 
 def train_segmentation_decoder(data, labels, first_feed, encoder_names, output_file, hist_file):
+    tf.keras.utils.get_custom_objects()['custom_loss'] = softmax_cross_entropy
+    labels = tf.convert_to_tensor(labels)
+
     model = make_segmentation_model(data["inputs"][first_feed].shape[-1], 2)
 
     model.compile(
@@ -20,6 +23,7 @@ def train_segmentation_decoder(data, labels, first_feed, encoder_names, output_f
     )
 
     model.summary()
+
     historyMod = model.fit(
         {"feed1": data["inputs"][first_feed], "feed2": data["inputs"][2], "feed3": data["inputs"][3]},
         {"output": labels},

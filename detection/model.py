@@ -107,6 +107,16 @@ def roi_pooling_layer(half_feed2, y_index, x_index):
 
 
 def make_detection_model(in_features, num_classes): 
+    tf.keras.utils.get_custom_objects()['SelectLayer'] = SelectLayer
+    tf.keras.utils.get_custom_objects()['ClipLayer'] = ClipLayer
+    tf.keras.utils.get_custom_objects()['FloorLayer'] = FloorLayer
+    tf.keras.utils.get_custom_objects()['CeilLayer'] = CeilLayer
+    tf.keras.utils.get_custom_objects()['MultiplyScalarLayer'] = MultiplyScalarLayer
+    tf.keras.utils.get_custom_objects()['GatherLayer'] = GatherLayer
+    tf.keras.utils.get_custom_objects()['SplitLayer'] = SplitLayer
+    tf.keras.utils.get_custom_objects()['ValueLayer'] = ValueLayer
+    tf.keras.utils.get_custom_objects()['TransposeLayer'] = TransposeLayer
+
     # input streams from encoder
     feed1_input = tf.keras.Input(
         shape=(GRID_HEIGHT, GRID_WIDTH, in_features), 

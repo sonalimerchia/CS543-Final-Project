@@ -6,8 +6,8 @@ import pickle
 from detection.model import make_detection_model
 from detection.loss import box_loss, confidence_loss, delta_conf_loss, roi_box_loss
 
-EPOCHS = 1000
-BATCH_SIZE = 64
+EPOCHS = 100
+BATCH_SIZE = 32
 
 def train_detection_decoder(data, labels, first_feed, encoder_names, output_file, hist_file):
     model = make_detection_model(data["inputs"][first_feed].shape[-1], 2)
