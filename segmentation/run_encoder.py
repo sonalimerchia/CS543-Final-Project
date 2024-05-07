@@ -15,7 +15,7 @@ def get_keys(model):
     else: 
         return "scale_5", "scale_5", "scale_4", "scale_3"
 
-def run_encoder_for_segmentation(encoder, model, output_file, filenames): 
+def run_encoder_for_segmentation(encoder, model, output_file, images, filenames): 
     print("Batching for Segmentation...")
     batch_size = 10
     num_batches = math.ceil(len(filenames) / batch_size)
@@ -30,11 +30,11 @@ def run_encoder_for_segmentation(encoder, model, output_file, filenames):
         if end > len(filenames): 
             end = len(filenames)
         
-        images, _ = read_image_data(filenames[start:end])
+        batch_images, _ = images[start:end]
 
         # Run encoder
         start_t = time.time_ns() // 1000000
-        encoder.build(images)
+        encoder.build(batch_images)
         end_t = time.time_ns() // 1000000
 
         # Only save times of complete batches

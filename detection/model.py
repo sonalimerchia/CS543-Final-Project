@@ -148,8 +148,8 @@ def make_detection_model(in_features, num_classes):
     pred_boxes_delta = MultiplyScalarLayer(tf.constant(5, dtype=tf.float32))(pred_boxes_delta)
     pred_boxes_delta = tf.keras.layers.Reshape([NUM_CELLS, 1, 4])(pred_boxes_delta) # (None, 468, 1, 4)
 
-    confidence_delta = tf.keras.layers.Conv2D(num_classes, 1, padding="same", name="pred_boxes_delta")(delta_features) # (None, 1, 468, num_classes)
-    confidence_delta = MultiplyScalarLayer(tf.constant(50, dtype=tf.float32))(confidence_delta)
+    confidence_delta = tf.keras.layers.Conv2D(num_classes, 1, padding="same", name="confidence_delta")(delta_features) # (None, 1, 468, num_classes)
+    confidence_delta = MultiplyScalarLayer(tf.constant(50, dtype=tf.float32), name="scaled_conf_del")(confidence_delta)
 
     roi_boxes = tf.keras.layers.Add(name="roi_boxes")([box_preds, pred_boxes_delta])
 

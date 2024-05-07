@@ -1,10 +1,9 @@
 import argparse
 import numpy as np
 import os
-from read_image_data import read_image_data
+from read_image_data import read_image_data_dir
 
 from encoders.vgg import VGGEncoder
-from encoders.resnet import ResNetEncoder
 
 import segmentation.run_encoder as segmentation
 import detection.run_encoder as detection
@@ -21,24 +20,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-r", "--training_images")
 parser.add_argument("-w", "--weights_file")
 parser.add_argument("-o", "--output_file")
-parser.add_argument('-m', "--model", choices=[VGG_POOL, VGG_FC, RESNET_50, RESNET_101])
+parser.add_argument('-m', "--model", choices=[VGG_POOL, VGG_FC])
 parser.add_argument('-u', "--use", choices=[SEGMENTATION, DETECTION])
 
 print("Reading Args...")
 args = parser.parse_args()
 
 print("Reading Image Names...")
-filenames = [os.path.join(args.training_images, f) for f in os.listdir(args.training_images) if os.path.isfile(os.path.join(args.training_images, f))]
+# filenames = [os.path.join(args.training_images, f) for f in os.listdir(args.training_images) if os.path.isfile(os.path.join(args.training_images, f))]
+image, filenames = read_image_data_dir(args.training_images)
 
 print("Building encoder...")
 encoder = None
-if args.model == VGG_POOL or args.model == VGG_FC:
-    encoder = VGGEncoder(args.weights_file, num_classes=2)
-else: 
-    encoder = ResNetEncoder(args.weights_file)
+encoder = VGGEncoder(args.weights_file, num_classes=2)
 
 print("Running encoder")
 if args.use == SEGMENTATION: 
-    segmentation.run_encoder_for_segmentation(encoder, args.model, args.output_file, filenames)
+    segmentation.run_encoder_for_segmentation(encoder, args.model, args.output_file, image, filenames)
 else: 
-    detection.run_encoder_for_detection(encoder, args.model, args.output_file, filenames)
+    detection.run_encoder_for_detection(encoder, args.model, args.output_file, image, filenames)

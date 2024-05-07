@@ -6,21 +6,12 @@ import pickle
 
 from tqdm import tqdm
 
-VGG_POOL = "VGG-pool5"
-VGG_FC = "VGG-fc7"
-
-def get_keys(model): 
-    if model == VGG_POOL or model == VGG_FC: 
-        return "pool_5", "fc7", "conv4_3"
-    else: 
-        return "scale_5", "scale_5", "scale_3"
-
-def run_encoder_for_detection(encoder, model, output_file, filenames): 
+def run_encoder_for_detection(encoder, model, output_file, images, filenames): 
     print("Batching for Detection...")
     batch_size = 10
     num_batches = math.ceil(len(filenames) / batch_size)
 
-    key1_1, key1_2, key2 = get_keys(model)
+    key1_1, key1_2, key2 = "pool_5", "fc7", "conv4_3"
 
     times = []
     inputs = None
@@ -30,11 +21,11 @@ def run_encoder_for_detection(encoder, model, output_file, filenames):
         if end > len(filenames): 
             end = len(filenames)
         
-        images, _ = read_image_data(filenames[start:end])
+        batch_images = images[start:end]
 
         # Run encoder
         start_t = time.time_ns() // 1000000
-        encoder.build(images)
+        encoder.build(batch_images)
         end_t = time.time_ns() // 1000000
 
         # Only save times of complete batches
