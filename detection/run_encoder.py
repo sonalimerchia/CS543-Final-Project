@@ -1,6 +1,4 @@
 from read_image_data import read_image_data
-import argparse
-import numpy as np
 import math
 import tensorflow as tf
 import time
@@ -20,8 +18,8 @@ def get_keys(model):
         return "scale_5", "scale_3"
 
 def run_encoder_for_detection(encoder, model, output_file, filenames): 
-    print("Batching")
-    batch_size = 10
+    print("Batching for Detection...")
+    batch_size = 2
     num_batches = math.ceil(len(filenames) / batch_size)
 
     key1, key2 = get_keys(model)

@@ -7,9 +7,9 @@ from segmentation.model import make_segmentation_model
 
 
 EPOCHS = 1000
-BATCH_SIZE = 100
+BATCH_SIZE = 32
 
-def train_segmentation_decoder(data, labels, encoder_names, output_file):
+def train_segmentation_decoder(data, labels, encoder_names, output_file, hist_file):
     model = make_segmentation_model(data["inputs"][0].shape[-1], 2)
 
     model.compile(
@@ -21,7 +21,7 @@ def train_segmentation_decoder(data, labels, encoder_names, output_file):
     )
 
     model.summary()
-    history = model.fit(
+    historyMod = model.fit(
         {"feed1": data["inputs"][0], "feed2": data["inputs"][1], "feed3": data["inputs"][2]},
         {"output": labels},
         epochs=EPOCHS,
@@ -32,7 +32,7 @@ def train_segmentation_decoder(data, labels, encoder_names, output_file):
     predictions = model([data["inputs"][0][:5], data["inputs"][1][:5], data["inputs"][2][:5]], training=False)
     for i, p in enumerate(predictions): 
         np.save(encoder_names[i][1:] + ".npy", p)
-
     model.save(output_file)
-    with open("hist.pkl") as file: 
-        pickle.dump(history, file)
+    
+    with open(hist_file, 'wb') as file: 
+        pickle.dump(historyMod.history, file)

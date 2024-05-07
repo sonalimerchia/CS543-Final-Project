@@ -1,6 +1,4 @@
 from read_image_data import read_image_data
-import argparse
-import numpy as np
 import math
 import tensorflow as tf
 import time
@@ -20,7 +18,7 @@ def get_keys(model):
         return "scale_5", "scale_4", "scale_3"
 
 def run_encoder_for_segmentation(encoder, model, output_file, filenames): 
-    print("Batching")
+    print("Batching for Segmentation...")
     batch_size = 10
     num_batches = math.ceil(len(filenames) / batch_size)
 

@@ -12,3 +12,9 @@ class ResNetEncoder():
         else: 
             self.model = tf.keras.applications.ResNet101(weights='imagenet')
         
+
+    def __getitem__(self, key): 
+        if key not in self.layer_names: 
+            return None 
+
+        return self.layers[self.layer_names[key]]

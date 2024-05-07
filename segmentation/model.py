@@ -41,9 +41,7 @@ def make_segmentation_model(in_channels, num_classes, scale=0.01):
     combinef2_f3 = tf.keras.layers.Add()([feed2_upsample, feed3_conv])
     # (batch_size, 48, 156, 2)-> (batch_size, 384, 1248, 2)
     feed3_upsample = tf.keras.layers.UpSampling2D(size=8, interpolation='bilinear', name="output")(combinef2_f3)
-    # softmax = tf.keras.layers.Softmax()(feed3_upsample)
- 
-    # softmax = tf.keras.layers.Softmax()(feed3_upsample)
+    
     return tf.keras.Model(
         inputs=[feed1_input, feed2_input, feed3_input],
         outputs=[feed3_upsample],
