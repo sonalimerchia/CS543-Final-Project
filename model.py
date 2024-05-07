@@ -11,9 +11,9 @@ np.random.seed(42)
 random_seed = 42
 
 
-# classes for the layers of the CNN
+# classes for the layers of the model
 
-# a base class
+# a base class for all layers
 class Layer:
     def __init__(self):
         self.input = None
