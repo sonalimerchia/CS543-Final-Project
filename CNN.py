@@ -1,11 +1,14 @@
 # necessary imports
 import cupy as np
-import cv2
-import os
 import cupyx.scipy.signal as signal
+import cv2
+import numpy
+import os
+import random
 
 # setting seed for random number generation for reproducibility
 np.random.seed(42)
+random_seed = 42
 
 
 # classes for the layers of the CNN
@@ -40,8 +43,8 @@ class ConvolutionalSame(Layer):
         self.kernel_size = kernel_size
         self.depth = depth
         self.kernel_shape = (depth, self.input_depth, kernel_size, kernel_size)
-        self.kernels = np.random.rand(*self.kernel_shape)
-        self.biases = np.random.rand(depth, input_shape[1], input_shape[2])
+        self.kernels = np.random.rand(*self.kernel_shape) - 0.5
+        self.biases = np.random.rand(depth, input_shape[1], input_shape[2]) - 0.5
         if directory is not None:
             self.kernels = np.load(directory + '/kernels.pickle', allow_pickle=True)
             self.biases = np.load(directory + '/biases.pickle', allow_pickle=True)
@@ -83,8 +86,8 @@ class ConvolutionalTranspose(Layer):
         self.depth = depth
         self.kernel_shape = (depth, self.output_depth, kernel_size, kernel_size)
         self.input_shape = (depth, self.output_height // kernel_size, self.output_width // kernel_size)
-        self.kernels = np.random.rand(*self.kernel_shape)
-        self.biases = np.random.rand(*self.output_shape)
+        self.kernels = np.random.rand(*self.kernel_shape) - 0.5
+        self.biases = np.random.rand(*self.output_shape) - 0.5
         if directory is not None:
             self.kernels = np.load(directory + '/kernels.pickle', allow_pickle=True)
             self.biases = np.load(directory + '/biases.pickle', allow_pickle=True)
@@ -99,11 +102,11 @@ class ConvolutionalTranspose(Layer):
         return output
     def backward(self, output_grad, learn_rate):
         kernel_grad = np.zeros(self.kernel_shape)
-        tmp_input_grad = np.zeros((self.depth, self.output_height, self.output_width))
+        tmp_input_grad = np.zeros((self.depth, self.output_height - self.kernel_size + 1, self.output_width - self.kernel_size + 1))
         for i in range(self.depth):
             for j in range(self.output_depth):
-                kernel_grad[i, j] = signal.correlate2d(self.input[i], output_grad[j], mode='valid')
-                tmp_input_grad[i] += signal.correlate2d(output_grad[j], self.kernels[i, j], mode='same')
+                kernel_grad[i, j] = signal.correlate2d(self.input[i], output_grad[j], mode='valid')[::-1, ::-1]
+                tmp_input_grad[i] += signal.correlate2d(output_grad[j], self.kernels[i, j], mode='valid')
         input_grad = tmp_input_grad[:, ::self.kernel_size, ::self.kernel_size]
         self.kernels -= learn_rate * kernel_grad
         self.biases -= learn_rate * output_grad
@@ -123,8 +126,8 @@ class ConvolutionalValid(Layer):
         self.input_depth = input_shape[0]
         self.depth = depth
         self.kernel_shape = (depth, self.input_depth, kernel_size, kernel_size)
-        self.kernels = np.random.rand(*self.kernel_shape)
-        self.biases = np.random.rand(depth, input_shape[1] - kernel_size + 1, input_shape[2] - kernel_size + 1)
+        self.kernels = np.random.rand(*self.kernel_shape) - 0.5
+        self.biases = np.random.rand(depth, input_shape[1] - kernel_size + 1, input_shape[2] - kernel_size + 1) - 0.5
         if directory is not None:
             self.kernels = np.load(directory + '/kernels.pickle', allow_pickle=True)
             self.biases = np.load(directory + '/biases.pickle', allow_pickle=True)
@@ -152,29 +155,6 @@ class ConvolutionalValid(Layer):
         os.makedirs(os.path.dirname(directory + '/biases.pickle'), exist_ok=True)
         with open(directory + '/biases.pickle', 'wb') as f:
             self.biases.dump(f)
-
-# a neural network's standard dense layer
-class Dense(Layer):
-    def __init__(self, input_size, output_size, directory=None):
-        self.weights = np.random.rand(output_size, input_size)
-        self.bias = np.random.rand(output_size, 1)
-        if directory is not None:
-            self.weights = np.load(directory + '/weights.pickle', allow_pickle=True)
-            self.biases = np.load(directory + '/bias.pickle', allow_pickle=True)
-    def forward(self, input):
-        self.input = input
-        return np.dot(self.weights, self.input) + self.bias
-    def backward(self, output_grad, learn_rate):
-        self.weights -= learn_rate * np.dot(output_grad, self.input.T)
-        self.bias -= learn_rate * output_grad
-        return np.dot(self.weights.T, output_grad)
-    def save(self, directory):
-        os.makedirs(os.path.dirname(directory + '/weights.pickle'), exist_ok=True)
-        with open(directory + '/weights.pickle', 'wb') as f:
-            self.weights.dump(f)
-        os.makedirs(os.path.dirname(directory + '/bias.pickle'), exist_ok=True)
-        with open(directory + '/bias.pickle', 'wb') as f:
-            self.bias.dump(f)
 
 # a maxpool layer
 class MaxPool(Layer):
@@ -217,16 +197,6 @@ class ReLU(Activation):
             return np.ones_like(x) * (x > 0)
         super().__init__(relu_func, relu_derivative)
 
-# a Sigmoid activation layer
-class Sigmoid(Activation):
-    def __init__(self, directory=None):
-        def sigmoid_func(x):
-            return 1 / (1 + np.exp(-x))
-        def sigmoid_derivative(x):
-            y = sigmoid_func(x)
-            return y * (1 - y)
-        super().__init__(sigmoid_func, sigmoid_derivative)
-
 
 # error function and its derivative
 def mse(y, output):
@@ -236,62 +206,61 @@ def mse_derivative(y, output):
 
 
 # hyperparameters
-epochs = 2
-learn_rate = 0.1
+epochs = 200 # trained 200 epochs at a time
+# trained four times
+learn_rate = 10
+batch_size = 32
 
 
-# Whether or not to train, tune, or test if the code is run
+# Whether or not to train or test if the code is run
 training = False
-tuning = False
 testing = False
 
-# Whether or not to run the segmenter or the detector
-segment = True
-detect = False
+# Whether or not to run the segmenter
+segment = False
 
 
 # encoder
 def encode(x, decoder, index):
     encoder = [
         Reshape((384, 1248, 3), (3, 384, 1248)),
-        ConvolutionalSame((3, 384, 1248), 3, 64, directory='encoder_0'),
+        ConvolutionalSame((3, 384, 1248), 3, 64, directory='weights/encoder_0'),
         ReLU(),
-        ConvolutionalSame((64, 384, 1248), 3, 64, directory='encoder_1'),
+        ConvolutionalSame((64, 384, 1248), 3, 64, directory='weights/encoder_1'),
         ReLU(),
         MaxPool((64, 384, 1248), 2),
-        ConvolutionalSame((64, 192, 624), 3, 128, directory='encoder_2'),
+        ConvolutionalSame((64, 192, 624), 3, 128, directory='weights/encoder_2'),
         ReLU(),
-        ConvolutionalSame((128, 192, 624), 3, 128, directory='encoder_3'),
+        ConvolutionalSame((128, 192, 624), 3, 128, directory='weights/encoder_3'),
         ReLU(),
         MaxPool((128, 192, 624), 2),
-        ConvolutionalSame((128, 96, 312), 3, 256, directory='encoder_4'),
+        ConvolutionalSame((128, 96, 312), 3, 256, directory='weights/encoder_4'),
         ReLU(),
-        ConvolutionalSame((256, 96, 312), 3, 256, directory='encoder_5'),
+        ConvolutionalSame((256, 96, 312), 3, 256, directory='weights/encoder_5'),
         ReLU(),
-        ConvolutionalSame((256, 96, 312), 3, 256, directory='encoder_6'),
+        ConvolutionalSame((256, 96, 312), 3, 256, directory='weights/encoder_6'),
         ReLU(),
         MaxPool((256, 96, 312), 2),
-        ConvolutionalSame((256, 48, 156), 3, 512, directory='encoder_7'),
+        ConvolutionalSame((256, 48, 156), 3, 512, directory='weights/encoder_7'),
         ReLU(),
-        ConvolutionalSame((512, 48, 156), 3, 512, directory='encoder_8'),
+        ConvolutionalSame((512, 48, 156), 3, 512, directory='weights/encoder_8'),
         ReLU(),
-        ConvolutionalSame((512, 48, 156), 3, 512, directory='encoder_9'),
+        ConvolutionalSame((512, 48, 156), 3, 512, directory='weights/encoder_9'),
         ReLU(),
         MaxPool((512, 48, 156), 2),
-        ConvolutionalSame((512, 24, 78), 3, 512, directory='encoder_10'),
+        ConvolutionalSame((512, 24, 78), 3, 512, directory='weights/encoder_10'),
         ReLU(),
-        ConvolutionalSame((512, 24, 78), 3, 512, directory='encoder_11'),
+        ConvolutionalSame((512, 24, 78), 3, 512, directory='weights/encoder_11'),
         ReLU(),
-        ConvolutionalSame((512, 24, 78), 3, 512, directory='encoder_12'),
+        ConvolutionalSame((512, 24, 78), 3, 512, directory='weights/encoder_12'),
         ReLU(),
         MaxPool((512, 24, 78), 2)
     ]
     os.makedirs(os.path.dirname(decoder + '_input_encoded/' + str(0) + '.pickle'), exist_ok=True)
-    for i in range(len(x)):
-        output = x[i]
+    for i in x:
+        output = i
         for layer in encoder:
             output = layer.forward(output)
-        x[i] = output
         with open(decoder + '_input_encoded/' + str(index) + '.pickle', 'wb') as f:
             output.dump(f)
         index += 1
@@ -302,21 +271,21 @@ if segment:
     # loading in the data and splitting it into sets for training, tuning, and testing
 
     # loading the input data for the segmenter
-    image_list = os.listdir('data_road/training/image_2')
-    images = []
-    for i in image_list:
-        images.append(np.asarray(cv2.resize(cv2.imread('data_road/training/image_2/' + i).astype('float64'), (1248, 384))))
-    encode(images, 'segmenter', 0)
-    #images_list = os.listdir('segmenter_input_encoded')
+    #image_list = os.listdir('data_road/training/image_2')
     #images = []
     #for i in image_list:
-    #    images.append(np.load('segmenter_input_encoded/' + i, allow_pickle=True))
+    #    images.append(np.asarray(cv2.resize(cv2.imread('data_road/training/image_2/' + i).astype('float64'), (1248, 384))))
+    #encode(images, 'segmenter', 0)
+    image_list = os.listdir('segmenter_input_encoded')
+    images = []
+    for i in image_list:
+        images.append(np.load('segmenter_input_encoded/' + i, allow_pickle=True))
     x_train = images[0:int(0.7 * len(images))]
     x_val = images[int(0.7 * len(images)):int(0.85 * len(images))]
     x_test = images[int(0.85 * len(images)):]
 
     # loading the output data for the segmenter
-    #image_list = os.listdir('data_road/training/image_2')
+    image_list = os.listdir('data_road/training/image_2')
     images = []
     for i in image_list:
         data_image = np.asarray(cv2.resize(cv2.imread('data_road/training/gt_image_2/' + i.split('_')[0] + '_road_' + i.split('_')[1]).astype('float64'), (1248, 384)))
@@ -330,14 +299,13 @@ if segment:
 
     # segmenter
     segmenter = [
-        ConvolutionalSame((512, 12, 39), 1, 2),
+        ConvolutionalValid((512, 12, 39), 1, 2, directory='weights/segmenter_0'),
         ReLU(),
-        ConvolutionalTranspose((256, 24, 78), 2, 2),
+        ConvolutionalTranspose((256, 24, 78), 2, 2, directory='weights/segmenter_2'),
         ReLU(),
-        ConvolutionalTranspose((2, 48, 156), 2, 256),
+        ConvolutionalTranspose((2, 48, 156), 2, 256, directory='weights/segmenter_4'),
         ReLU(),
-        ConvolutionalTranspose((2, 384, 1248), 8, 2),
-        ReLU(),
+        ConvolutionalTranspose((2, 384, 1248), 8, 2, directory='weights/segmenter_6'),
         Reshape((2, 384, 1248), (384, 1248, 2))
     ]
 
@@ -346,7 +314,13 @@ if segment:
         strepochs = '/' + str(epochs) + ': '
         for e in range(epochs):
             error = 0
-            for x, y in zip(x_train, y_train):
+            random.seed(random_seed)
+            batch_index = random.sample(range(len(x_train)), batch_size)
+            random.seed(random_seed)
+            random_seed = random.randint(1, 2000000)
+            x_batch = [x_train[i] for i in batch_index]
+            y_batch = [y_train[i] for i in batch_index]
+            for x, y in zip(x_batch, y_batch):
                 output = x
                 for layer in segmenter:
                     output = layer.forward(output)
@@ -354,110 +328,35 @@ if segment:
                 grad = mse_derivative(y, output)
                 for layer in reversed(segmenter):
                     grad = layer.backward(grad, learn_rate)
-            error /= len(x_train)
+            error /= batch_size
             print(str(e + 1) + strepochs + str(error))
-        #for i in range(len(segmenter)):
-        #    segmenter[i].save('weights/segmenter_' + str(i))
-
-    # tuning code
-    if tuning:
-        error = 0
-        for x, y in zip(x_val, y_val):
-            output = x
-            for layer in segmenter:
-                output = layer.forward(output)
-            error += mse(y, output)
-        error /= len(x_val)
-        print(error)
+            if (e % 20) == 19:
+                val_error = 0
+                for a, b in zip(x_val, y_val):
+                    output = a
+                    for layer in segmenter:
+                        output = layer.forward(output)
+                    val_error += mse(b, output)
+                val_error /= len(x_val)
+                print('validation error: ' + str(val_error))
+        for i in range(len(segmenter)):
+            segmenter[i].save('weights/segmenter_' + str(i))
 
     # testing code
     if testing:
         error = 0
+        vis_index = 0
+        os.makedirs(os.path.dirname('segmenter_output/0.png'), exist_ok=True)
         for x, y in zip(x_test, y_test):
             output = x
             for layer in segmenter:
                 output = layer.forward(output)
             error += mse(y, output)
-        error /= len(x_test)
-        print(error)
-
-# code to run detector
-if detect:
-
-    # loading in the data and splitting it into sets for training, tuning, and testing
-
-    # loading the input data for the segmenter
-    image_list = os.listdir('data_object/training/image_2')
-    images = []
-    for i in image_list:
-        images.append(np.asarray(cv2.resize(cv2.imread('data_object/training/image_2/' + i).astype('float64'), (1248, 384))))
-    encode(images, 'detector', 0)
-    #images_list = os.listdir('detector_input_encoded')
-    #images = []
-    #for i in image_list:
-    #    images.append(np.load('detector_input_encoded/' + i, allow_pickle=True))
-    x_train = images[0:int(0.7 * len(images))]
-    x_val = images[int(0.7 * len(images)):int(0.85 * len(images))]
-    x_test = images[int(0.85 * len(images)):]
-
-    # loading the output data for the segmenter
-    # TODO properly read in output data for detector
-    #image_list = os.listdir('data_object/training/label_2')
-    images = []
-    for i in image_list:
-        with open('data_object/training/label_2/' + i.split('.')[0] + '.txt') as f:
-            data_image = np.zeros((384, 1248, 2))
-            actual_image = np.zeros((384, 1248, 2))
-            images.append(actual_image)
-    y_train = images[0:int(0.7 * len(images))]
-    y_val = images[int(0.7 * len(images)):int(0.85 * len(images))]
-    y_test = images[int(0.85 * len(images)):]
-
-    # detector
-    # TODO set up layers for detector
-    detector = [
-        ConvolutionalSame((512, 12, 39), 1, 500),
-        ReLU(),
-        ConvolutionalSame((500, 12, 39), 1, 6),
-        ReLU()
-    ]
-
-    # training code
-    if training:
-        strepochs = '/' + str(epochs) + ': '
-        for e in range(epochs):
-            error = 0
-            for x, y in zip(x_train, y_train):
-                output = x
-                for layer in detector:
-                    output = layer.forward(output)
-                error += mse(y, output)
-                grad = mse_derivative(y, output)
-                for layer in reversed(detector):
-                    grad = layer.backward(grad, learn_rate)
-            error /= len(x_train)
-            print(str(e + 1) + strepochs + str(error))
-        for i in range(len(detector)):
-            detector[i].save('weights/detector_' + str(i))
-
-    # tuning code
-    if tuning:
-        error = 0
-        for x, y in zip(x_val, y_val):
-            output = x
-            for layer in detector:
-                output = layer.forward(output)
-            error += mse(y, output)
-        error /= len(x_val)
-        print(error)
-
-    # testing code
-    if testing:
-        error = 0
-        for x, y in zip(x_test, y_test):
-            output = x
-            for layer in detector:
-                output = layer.forward(output)
-            error += mse(y, output)
+            vis = numpy.zeros((384, 1248, 3), dtype=numpy.uint8)
+            vis[:, :, 0] += 255
+            vis[:, :, 2] += 255 * np.asnumpy(output[:, :, 0] >= 0.5).astype(numpy.uint8)
+            vis[:, :, 0] -= 255 * np.asnumpy(output[:, :, 1] >= 0.5).astype(numpy.uint8)
+            cv2.imwrite('segmenter_output/' + str(vis_index) + '.png', cv2.cvtColor(vis, cv2.COLOR_RGB2BGR))
+            vis_index += 1
         error /= len(x_test)
         print(error)
