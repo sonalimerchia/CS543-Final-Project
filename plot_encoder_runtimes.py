@@ -6,7 +6,7 @@ import pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_file")
-parser.add_argument("-o", "--output_folder")
+parser.add_argument("-o", "--output_file")
 args = parser.parse_args()
 
 filename = args.input_file
@@ -20,7 +20,7 @@ plt.hist(data)
 plt.title("Runtime of VGG Encoder")
 plt.xlabel("Time (ms)")
 plt.ylabel("Frequency")
-plt.savefig(args.output_folder + "encoder_runtime_plot.png")
+plt.savefig(args.output_file)
 # X = np.arange(data.shape[0])
 # Y = np.arange(data.shape[1])
 
