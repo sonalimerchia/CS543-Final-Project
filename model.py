@@ -307,3 +307,5 @@ if segment:
             vis_index += 1
         loss /= len(x_test)
         print(loss)
+
+# code inspired by https://github.com/TheIndependentCode
